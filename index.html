@@ -1,0 +1,448 @@
+<title>Misi IMEI Belawan</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,700;12..96,800&family=Atkinson+Hyperlegible:wght@400;700&family=JetBrains+Mono:wght@500;700&display=swap">
+<style>
+/* Layout: panggung visual novel sudut pandang orang pertama — foto latar penuh, petugas/lawan bicara di tengah, kotak dialog di bawah, panel misi menimpa panggung. Tampilan tunggal (gelap) dipilih sengaja agar foto latar menonjol. */
+:root{
+  --page:#0b1820; --ink:#f3f6f7; --box:rgba(10,26,36,.92); --box-line:#3a6577;
+  --signal:#f2b130; --signal-ink:#261a00; --navy:#173a52; --think:#2a2346;
+  --paper:#fbf8f2; --paper-ink:#1b2a33; --paper-line:#d6dde0; --muted:#8fa6b0;
+  --ok:#2f9e66; --bad:#d4483d;
+  --display:"Bricolage Grotesque","Arial Narrow",system-ui,sans-serif;
+  --body:"Atkinson Hyperlegible",system-ui,-apple-system,"Segoe UI",sans-serif;
+  --mono:"JetBrains Mono",ui-monospace,Menlo,monospace;
+  color-scheme:dark;
+}
+*{box-sizing:border-box}
+[hidden]{display:none!important}
+html,body{height:100%}
+body{background:var(--page);color:var(--ink);font-family:var(--body);padding-inline:16px;padding-block:10px;display:flex;flex-direction:column;align-items:center;gap:8px}
+button{font:inherit;cursor:pointer}
+:focus-visible{outline:3px solid var(--signal);outline-offset:2px}
+
+.hud{width:100%;max-width:1000px;display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap;font-size:.75rem}
+.hud .t{font-family:var(--display);font-weight:800;color:var(--signal);letter-spacing:.03em;font-size:.9rem}
+.steps{display:flex;gap:4px;flex-wrap:wrap}
+.steps span{padding:3px 8px;border-radius:20px;border:1px solid var(--box-line);color:var(--muted)}
+.steps span.on{background:var(--signal);border-color:var(--signal);color:var(--signal-ink);font-weight:700}
+.steps span.done{color:var(--ink);border-color:var(--ink)}
+
+.stage{position:relative;width:min(100%, calc((100dvh - 70px) * 16 / 9));max-width:1000px;aspect-ratio:16/9;border-radius:14px;overflow:hidden;border:1px solid var(--box-line);background:#000;user-select:none}
+@media (max-aspect-ratio:4/5){.stage{aspect-ratio:auto;height:calc(100dvh - 80px);min-height:540px}}
+
+.bg{position:absolute;inset:0;background-size:cover;background-position:center;transition:opacity .6s}
+.bg.out{opacity:0}
+.sprite{position:absolute;left:50%;bottom:0;height:94%;transform:translateX(-50%);transition:opacity .35s,transform .35s;filter:drop-shadow(0 8px 24px rgba(0,0,0,.45))}
+.sprite.hide{opacity:0;transform:translate(-50%,24px)}
+@media (max-aspect-ratio:4/5){.sprite{height:72%;bottom:12%}}
+.sprite.dim{filter:brightness(.62) drop-shadow(0 8px 24px rgba(0,0,0,.45))}
+
+.dlg{position:absolute;left:12px;right:12px;bottom:12px;min-height:22%;background:var(--box);border:2px solid var(--box-line);border-radius:12px;padding:24px 18px 30px;cursor:pointer;backdrop-filter:blur(4px)}
+.dlg.think{background:rgba(42,35,70,.93);border-color:#7f6fc2;border-style:dashed}
+.dlg.think .txt{font-style:italic}
+.dlg .name{position:absolute;top:-15px;left:14px;background:var(--signal);color:var(--signal-ink);font-family:var(--display);font-weight:800;padding:3px 12px;border-radius:4px;font-size:.95rem}
+.dlg .name.me{background:#7fc0de;color:#08202c}
+.dlg .name.th{background:#b6a8f0;color:#1d1640}
+.dlg .name.narr{background:var(--box-line);color:var(--ink)}
+.dlg .txt{font-size:clamp(1rem,2.2vw,1.15rem);line-height:1.5;max-width:70ch}
+.dlg .more{position:absolute;right:14px;bottom:8px;font-size:.75rem;color:var(--muted)}
+.dlg .more::after{content:" ▸"}
+.choices{position:absolute;left:50%;transform:translateX(-50%);width:min(560px,calc(100% - 32px));bottom:calc(22% + 30px);display:flex;flex-direction:column;gap:8px}
+.choice{background:var(--paper);color:var(--paper-ink);border:2px solid var(--signal);border-radius:10px;padding:11px 14px;text-align:left;font-weight:700;box-shadow:0 6px 18px rgba(0,0,0,.35)}
+.choice:hover{background:#fff1cf}
+.choice .k{font-family:var(--mono);color:#a36d00;margin-right:8px}
+
+.fade{position:absolute;inset:0;background:#000;display:flex;align-items:center;justify-content:center;font-family:var(--display);font-weight:700;font-size:clamp(1.4rem,4vw,2rem);opacity:0;pointer-events:none;transition:opacity .8s;text-align:center;padding:20px}
+.fade.on{opacity:1;pointer-events:auto}
+
+.panel{position:absolute;inset:0;background:rgba(6,16,22,.6);display:flex;align-items:center;justify-content:center;padding:14px}
+.sheet{background:var(--paper);color:var(--paper-ink);border-radius:14px;width:100%;max-width:520px;max-height:100%;overflow:auto;padding:16px;display:flex;flex-direction:column;gap:12px;box-shadow:0 20px 50px rgba(0,0,0,.5)}
+.sheet h2{font-family:var(--display);font-weight:800;font-size:1.25rem;margin:0;text-wrap:balance}
+.sheet p{margin:0;font-size:.88rem}
+.tag{font-size:.7rem;letter-spacing:.12em;text-transform:uppercase;font-weight:700;color:#6b7f88}
+.field{display:flex;flex-direction:column;gap:5px}
+.field .lb,.field label{font-size:.82rem;font-weight:700}
+.inp{display:flex;align-items:center;gap:8px;border:1.5px solid var(--paper-line);border-radius:8px;background:#fff;padding:0 10px}
+.inp input{border:0;outline:0;font-family:var(--mono);font-size:1rem;padding:10px 0;width:100%;background:transparent;color:var(--paper-ink)}
+.inp:focus-within{border-color:var(--navy)}
+.inp span{font-size:.8rem;color:#6b7f88;white-space:nowrap}
+.yn{display:flex;gap:8px}
+.yn button{flex:1;border:1.5px solid var(--paper-line);background:#fff;color:var(--paper-ink);border-radius:8px;padding:9px;font-weight:700}
+.yn button.on{border-color:var(--navy);background:var(--navy);color:#fff}
+.hint{font-size:.84rem;background:#fff1cf;border-left:4px solid var(--signal);padding:8px 10px;border-radius:4px}
+.hint.bad{background:#fde3e0;border-color:var(--bad)}
+.hint.good{background:#e2f4ea;border-color:var(--ok)}
+.go{background:var(--signal);color:var(--signal-ink);border:0;border-radius:10px;padding:13px;font-weight:800;font-family:var(--display);font-size:1.05rem}
+.go:disabled{opacity:.4;cursor:default}
+details.info{border:1.5px solid var(--paper-line);border-radius:8px;padding:8px 10px;background:#f1f5f6}
+details.info summary{font-weight:700;font-size:.85rem;font-style:italic;cursor:pointer}
+table{width:100%;border-collapse:collapse;font-size:.85rem;color:inherit}
+td{padding:6px 0;border-bottom:1px solid var(--paper-line);vertical-align:top}
+td:last-child{text-align:right;font-family:var(--mono);font-variant-numeric:tabular-nums;white-space:nowrap;padding-left:8px}
+tr.tot td{font-weight:800;border:0;font-size:.95rem}
+.agree{display:flex;gap:8px;align-items:flex-start;font-size:.82rem}
+.agree input{margin-top:3px;width:18px;height:18px;flex:none}
+.qrbox{display:flex;gap:12px;align-items:center}
+.qrbox canvas{width:104px;height:104px;image-rendering:pixelated;border:6px solid #fff;outline:1px solid var(--paper-line);flex:none}
+
+/* koper */
+.belt{display:grid;grid-template-columns:repeat(3,1fr);gap:10px}
+.bag{background:#fff;border:1.5px solid var(--paper-line);border-radius:10px;padding:8px;display:flex;flex-direction:column;align-items:center;gap:4px}
+.bag svg{width:100%;max-width:80px;height:auto}
+.bag small{font-family:var(--mono);font-size:.72rem;font-weight:700;background:#fff1cf;border:1px solid #e5c56f;padding:1px 6px;border-radius:3px;max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.bag.no{animation:shake .3s;border-color:var(--bad)}
+@keyframes shake{25%{transform:translateX(-4px)}75%{transform:translateX(4px)}}
+
+/* bukti */
+.receipt{border:1.5px dashed #9aa9b0;border-radius:8px;padding:12px;background:#fff;position:relative;overflow:hidden;display:flex;flex-direction:column;gap:8px}
+.receipt::after{content:"SIMULASI";position:absolute;right:-30px;top:40%;transform:rotate(-24deg);font-family:var(--display);font-weight:800;font-size:2.6rem;color:rgba(212,72,61,.16);letter-spacing:.1em;pointer-events:none}
+.receipt h3{margin:0;font-family:var(--display);font-size:1rem}
+
+/* judul */
+.title{position:absolute;inset:0;display:flex;flex-direction:column;justify-content:flex-end;gap:12px;padding:24px;background:linear-gradient(90deg,rgba(8,20,28,.94) 0%,rgba(8,20,28,.82) 45%,rgba(8,20,28,.15) 100%)}
+@media (max-aspect-ratio:4/5){.title{background:linear-gradient(transparent 10%,rgba(8,20,28,.94) 55%)}}
+.title>*{max-width:420px}
+.title h1{font-family:var(--display);font-weight:800;font-size:clamp(2.2rem,7vw,3.4rem);line-height:.95;margin:0;letter-spacing:-.02em}
+.title h1 em{font-style:normal;color:var(--signal)}
+.title p{margin:0;color:#cfdbe0}
+.title .inp{background:rgba(255,255,255,.95)}
+.facts{margin:0;padding-left:18px;font-size:.86rem;display:flex;flex-direction:column;gap:5px}
+.sheet a{color:var(--navy);font-weight:700}
+code.n{font-family:var(--mono);font-weight:700;background:#e8eef0;padding:2px 8px;border-radius:4px;user-select:all}
+.foot{font-size:.7rem;color:var(--muted);text-align:center;max-width:1000px;margin:0}
+@media (prefers-reduced-motion:reduce){.bg,.sprite,.fade{transition:none}}
+</style>
+
+<div class="hud">
+  <span class="t">MISI IMEI</span>
+  <div class="steps" id="steps"></div>
+</div>
+<div class="stage" id="stage">
+  <div class="bg" id="bg"></div>
+  <img class="sprite hide" id="sp" alt="">
+  <div id="choices" class="choices" hidden></div>
+  <div class="dlg" id="dlg" hidden tabindex="0" role="button" aria-label="Lanjutkan dialog">
+    <span class="name" id="nm"></span><div class="txt" id="txt" aria-live="polite"></div><span class="more" id="more">ketuk</span>
+  </div>
+  <div class="panel" id="panel" hidden><div class="sheet" id="sheet"></div></div>
+  <div class="fade" id="fade"></div>
+  <div class="title" id="title">
+    <span class="tag" style="color:var(--signal)">Simulasi registrasi IMEI · Bandara Kualanamu</span>
+    <h1>Pulang Bawa<br><em>HP Baru</em></h1>
+    <p>Kamu baru tiba dari luar negeri. Daftarkan IMEI HP-mu lewat jalur resmi Bea Cukai.</p>
+    <div class="field"><label for="nama" style="color:var(--ink)">Siapa namamu?</label>
+      <div class="inp"><input id="nama" type="text" maxlength="16" autocomplete="off" placeholder="Tulis nama panggilan"></div></div>
+    <button class="go" id="start" disabled>Mulai</button>
+  </div>
+</div>
+<p class="foot">Prototipe edukasi Seksi Layanan Informasi KPPBC TMP Belawan. Kurs, harga, dan dokumen di dalam game hanya simulasi.</p>
+
+<script>
+const KURS=18000, BEBAS=500;
+const $=id=>document.getElementById(id);
+const rp=n=>"Rp"+Math.round(n).toLocaleString("id-ID");
+const usd=n=>"USD "+Number(n).toLocaleString("id-ID",{maximumFractionDigits:2});
+const reduce=matchMedia("(prefers-reduced-motion: reduce)").matches;
+const esc=s=>s.replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+
+const IMG=n=>`img/${n}.webp`;
+const BGS={lobby:"bg-lobby",bagasi:"bg-bagasi",antre:"bg-antre",hall:"bg-hall",luar:"bg-luar"};
+const STEPS=[["lobby","Lobi"],["bagasi","Bagasi"],["antre","Pemeriksaan"],["hall","Layanan IMEI"],["luar","Pintu keluar"]];
+// muat semua gambar lebih dulu
+["awan-dada","awan-silakan","awan-dokumen","awan-namaste","bela-namaste","bela-jelaskan","bela-arahkan","calo","calo-hp",...Object.values(BGS)].forEach(n=>{const i=new Image();i.src=IMG(n)});
+
+let P="Kamu", harga=0;
+const pajak=()=>{const lebih=Math.max(0,harga-BEBAS),np=lebih*KURS,bm=np*.10,ni=np+bm,ppn=ni*.12;return{lebih,np,bm,ni,ppn,total:bm+ppn}};
+
+/* =====================================================================
+   NASKAH PERCAKAPAN — BAGIAN INI YANG BOLEH DIEDIT
+   ---------------------------------------------------------------------
+   Setiap baris {...} = satu kotak dialog. Ubah teks di dalam t:"...".
+   - who : siapa yang bicara
+           "bela"  = Petugas Bela      "awan" = Petugas Awan
+           "calo"  = calo              "me"   = pemain (nama sesuai isian)
+           "think" = pemain dalam hati "narr" = narator (tanpa nama)
+   - sp  : gambar/gestur lawan bicara (boleh dihapus kalau tidak berubah)
+           bela-namaste | bela-jelaskan | bela-arahkan
+           awan-dada | awan-silakan | awan-dokumen | awan-namaste
+           calo | calo-hp | null (tanpa gambar)
+   - bg  : latar  lobby | bagasi | antre | hall | luar
+   - {mission:"..."} = mini-game (isi formulir, pilih koper, dll). Jangan dihapus.
+   ATURAN AMAN:
+   - Tiap baris diakhiri koma.
+   - Kalau teks memakai tanda kutip ganda di dalamnya, tulis \" (contoh: \"Ya\").
+   - Untuk menambah dialog, salin satu baris lalu ubah isinya.
+   ===================================================================== */
+const N={bela:"Petugas Bela",awan:"Petugas Awan",calo:"Pria berkacamata hitam",narr:""};
+const SCRIPT=[
+ {bg:"lobby",sp:null,who:"narr",t:"Pesawatmu baru saja mendarat di Bandara Internasional Kualanamu. Kamu berjalan ke lobi kedatangan sambil menggenggam HP baru yang dibeli di luar negeri."},
+ {who:"think",t:"Oh iya! Aku belum isi e-CD di All Indonesia. Isi sekarang saja sebelum ke pemeriksaan."},
+ {mission:"ecd"},
+ {who:"think",t:"Beres. QR code-nya sudah tersimpan. Sekarang ambil bagasi dulu."},
+ {bg:"bagasi",who:"narr",t:"Kamu tiba di tempat pengambilan bagasi. Koper-koper mulai bergerak di atas conveyor belt."},
+ {mission:"koper"},
+ {who:"think",t:"Koper aman. Lanjut ke pemeriksaan Bea Cukai."},
+ {bg:"antre",sp:"bela-namaste",who:"bela",t:"Selamat datang di Indonesia. Apakah Kakak sudah mengisi e-CD-nya?"},
+ {who:"me",t:"Sudah, Kak. Ini QR code-nya. Oh iya, saya mau daftar IMEI. Saya harus ke mana ya, Kak?"},
+ {sp:"bela-jelaskan",who:"bela",t:"Untuk pendaftaran IMEI bisa langsung diregistrasikan di sini ya, Kak. Apakah Kakak sudah memiliki dokumen persyaratannya?"},
+ {who:"me",t:"Dokumennya apa saja, Kak?"},
+ {sp:"bela-jelaskan",who:"bela",t:"Invoice atau faktur pembelian (jika ada), boarding pass, paspor, dan perangkat yang akan didaftarkan ya, Kak."},
+ {who:"me",t:"Oh, saya punya keempatnya, Kak!"},
+ {sp:"bela-arahkan",who:"bela",t:"Baik, Kak. Kakak bisa melanjutkan ke jalur ini ya."},
+ {who:"me",t:"Baik, terima kasih, Kak."},
+ {fade:"Setelah pemeriksaan…"},
+ {bg:"hall",sp:"awan-dada",who:"narr",t:"Kualanamu Customs Service Hall."},
+ {sp:"awan-dada",who:"awan",t:"Selamat siang, Kak. Ada yang bisa saya bantu?"},
+ {who:"me",t:"Saya mau daftar IMEI, Bang."},
+ {sp:"awan-silakan",who:"awan",t:"Baik, Kak, silakan duduk. Boleh saya minta dokumennya?"},
+ {mission:"dokumen"},
+ {sp:"awan-dokumen",who:"awan",t:"Saya lihat dulu dokumennya ya, Kak."},
+ {who:"me",t:"Baik, Bang."},
+ {who:"awan",t:"Apakah harga handphone pada invoice ini sudah benar, Kak?"},
+ {mission:"harga"},
+ {who:"awan",t:()=>harga<=BEBAS
+   ?`Harga HP-nya ${usd(harga)}, masih di dalam batas pembebasan USD ${BEBAS}. Jadi tidak ada bea masuk dan pajak yang perlu dibayar, Kak.`
+   :`Baik. Harga HP-nya ${usd(harga)}, melebihi pembebasan USD ${BEBAS}. Jadi pungutannya dihitung dari selisih ${usd(pajak().lebih)} ya, Kak.`},
+ {if:()=>harga>BEBAS,mission:"tagihan"},
+ {if:()=>harga>BEBAS,who:"awan",t:"Terima kasih. Ini Bukti Penerimaan Negara untuk dokumentasi Kakak ya."},
+ {if:()=>harga>BEBAS,mission:"bpn"},
+ {who:"me",t:"Kapan IMEI-nya bisa aktif, Bang?"},
+ {sp:"awan-dokumen",who:"awan",t:"IMEI akan aktif paling lambat 2×24 jam ya, Kak."},
+ {who:"me",t:"Baik, terima kasih ya, Bang."},
+ {sp:"awan-namaste",who:"awan",t:"Terima kasih, Kak. Selamat melanjutkan perjalanan."},
+ {bg:"luar",sp:null,who:"narr",t:"Kamu keluar menuju stasiun kereta bandara. Tiba-tiba seseorang mendekat."},
+ {sp:"calo",who:"calo",t:"Halo, Kak. Tadi saya lihat Kakak daftar IMEI, ya?"},
+ {who:"me",t:"Iya, Bang. Ada apa ya, Bang?"},
+ {who:"calo",t:"Saya punya jasa unlock IMEI yang cepat dan murah, Kak. Garansi seumur hidup! Tinggal transfer ke rekening pribadi saya aja."},
+ {who:"me",t:"Emang ini legal, Bang? Bisa aktif IMEI selama-lamanya?"},
+ {sp:"calo-hp",who:"calo",t:"Bener, Kak. Dijamin."},
+ {choice:true,who:"think",t:"Hmm… apa jawabanku?",
+  opts:[["Saya ada HP satu lagi nih, daftarin dong.",0],["Tidak, Bang. Setahu saya tidak ada jalur resmi yang transfer ke rekening pribadi. Terima kasih!",1]],
+  no:"Setahu saya, saya tidak sebodoh ini. Mungkin saya… harus pikir ulang."},
+ {sp:"calo",who:"narr",t:"Kamu segera meninggalkan pria itu dan berjalan menuju stasiun."},
+ {sp:null,who:"think",t:"Hari gini banyak orang yang nggak bisa dipercaya. Lebih baik lewat jalur resmi saja supaya nggak boncos dua kali."},
+ {mission:"akhir"}
+];
+
+/* ---------- mesin cerita ---------- */
+let idx=-1, typing=null, full="", curBg=null, waitChoice=false;
+function setSteps(bg){
+  const i=STEPS.findIndex(s=>s[0]===bg);
+  $("steps").innerHTML=STEPS.map((s,j)=>`<span class="${j<i?"done":j===i?"on":""}">${s[1]}</span>`).join("");
+}
+function setBg(k){
+  if(k===curBg)return; curBg=k; setSteps(k);
+  const el=$("bg"); el.classList.add("out");
+  setTimeout(()=>{el.style.backgroundImage=`url(${IMG(BGS[k])})`;el.classList.remove("out")},reduce?0:300);
+}
+function setSprite(name){
+  const sp=$("sp");
+  if(!name){sp.classList.add("hide");sp.dataset.n="";return}
+  if(sp.dataset.n!==name){sp.src=IMG(name);sp.dataset.n=name;sp.alt=name.startsWith("awan")?"Petugas Awan":name.startsWith("bela")?"Petugas Bela":"Pria berkacamata hitam"}
+  sp.classList.remove("hide");
+}
+function next(){
+  idx++;
+  while(idx<SCRIPT.length && SCRIPT[idx].if && !SCRIPT[idx].if()) idx++;
+  if(idx>=SCRIPT.length)return;
+  const n=SCRIPT[idx];
+  if(n.bg) setBg(n.bg);
+  if("sp" in n) setSprite(n.sp);
+  if(n.fade){ $("dlg").hidden=true; const f=$("fade"); f.textContent=n.fade; f.classList.add("on");
+    setTimeout(()=>{f.classList.remove("on");next()}, reduce?1200:2000); return; }
+  if(n.mission){ $("dlg").hidden=true; MISSIONS[n.mission](); return; }
+  say(n.who, typeof n.t==="function"?n.t():n.t, n.choice?()=>showChoice(n):null);
+}
+function say(who,text,done){
+  const d=$("dlg"), nm=$("nm");
+  d.hidden=false; d.classList.toggle("think",who==="think");
+  $("sp").classList.toggle("dim", who==="me"||who==="think"||who==="narr");
+  if(who==="me"){nm.textContent=P;nm.className="name me"}
+  else if(who==="think"){nm.textContent=P+" · dalam hati";nm.className="name th"}
+  else if(who==="narr"){nm.textContent="";nm.className="name narr";nm.hidden=true}
+  else {nm.textContent=N[who];nm.className="name"}
+  if(who!=="narr") nm.hidden=false;
+  $("more").hidden=!!done;
+  type(text,done);
+}
+function type(text,done){
+  clearInterval(typing); full=text; type.done=done; const el=$("txt");
+  if(reduce){el.textContent=text;typing=null;done&&done();return}
+  let i=0; el.textContent="";
+  typing=setInterval(()=>{el.textContent=text.slice(0,++i);if(i>=text.length){clearInterval(typing);typing=null;done&&done()}},16);
+}
+function advance(){
+  if(waitChoice||$("dlg").hidden)return;
+  if(typing){clearInterval(typing);typing=null;$("txt").textContent=full;type.done&&type.done();return}
+  next();
+}
+$("dlg").onclick=advance;
+$("dlg").onkeydown=e=>{if(e.key==="Enter"||e.key===" "){e.preventDefault();advance()}};
+
+function showChoice(n){
+  waitChoice=true; const box=$("choices"); box.hidden=false;
+  box.innerHTML=n.opts.map((o,i)=>`<button class="choice" data-i="${i}"><span class="k">${String.fromCharCode(65+i)}</span>${o[0]}</button>`).join("");
+  box.querySelector("button").focus();
+  box.querySelectorAll("button").forEach(b=>b.onclick=()=>{
+    const o=n.opts[+b.dataset.i]; box.hidden=true;
+    if(o[1]){ waitChoice=false; say("me",o[0]); }
+    else { say("think",n.no,()=>setTimeout(()=>{say("think",n.t,()=>showChoice(n))},1400)); }
+  });
+}
+function openPanel(html){$("sheet").innerHTML=html;$("panel").hidden=false;$("sheet").scrollTop=0;const f=$("sheet").querySelector("input,button");f&&f.focus()}
+function closePanel(){$("panel").hidden=true;next()}
+
+/* ---------- misi ---------- */
+const MISSIONS={
+ ecd(){
+  const ans={bag:null,wajib:null,imei:null,setuju:false};
+  openPanel(`<span class="tag">Simulasi All Indonesia · Customs Declaration</span>
+   <h2>Customs Declaration (BC 2.2)</h2>
+   <p style="color:#4b5f68">Pemberitahuan barang bawaan kepada petugas Bea dan Cukai. Data paspor sudah diisi di bagian sebelumnya.</p>
+   <details class="info"><summary>Informasi sebelum menjawab (ketuk untuk membuka)</summary>
+     <table style="margin-top:8px"><tr><td>Penumpang umum</td><td>s.d. FOB USD 500</td></tr>
+     <tr><td>Jemaah haji reguler</td><td>Seluruh barang pribadi</td></tr>
+     <tr><td>Jemaah haji khusus</td><td>s.d. FOB USD 2.500</td></tr>
+     <tr><td>Awak sarana pengangkut</td><td>s.d. FOB USD 50</td></tr></table>
+     <p style="font-size:.78rem;color:#4b5f68;margin-top:6px">Pembebasan bea masuk per orang per kedatangan untuk barang pribadi yang dibeli di luar negeri.</p></details>
+   <div class="hint">Bawaanmu: 1 koper di bagasi pesawat dan 1 ransel di kabin. Di ransel ada HP baru yang kamu beli di luar negeri dan akan dipakai dengan SIM card Indonesia.</div>
+   <div class="field"><label for="bag">Jumlah bagasi yang tiba bersama Anda</label>
+     <div class="inp"><input id="bag" type="number" min="0" max="9" inputmode="numeric" placeholder="Masukkan jumlah"><span>Pkg(s)</span></div></div>
+   <div id="hBag"></div>
+   <div class="field"><span class="lb">Apakah Anda membawa barang yang wajib diberitahukan kepada Bea dan Cukai?</span>
+     <div class="yn" data-q="wajib"><button data-v="1">Ya</button><button data-v="0">Tidak</button></div></div>
+   <div id="hWajib"></div>
+   <div class="field"><span class="lb">Apakah Anda membawa telepon seluler, komputer genggam, dan komputer tablet yang dibeli/diperoleh di luar negeri dan akan digunakan di Indonesia dengan jaringan seluler Indonesia? (Registrasi IMEI)</span>
+     <div class="yn" data-q="imei"><button data-v="1">Ya</button><button data-v="0">Tidak</button></div></div>
+   <div id="hImei"></div>
+   <label class="agree"><input type="checkbox" id="setuju"> Saya menyatakan memahami dan menyetujui semua informasi dan deklarasi dalam aplikasi ini.</label>
+   <button class="go" id="kirim" disabled>Kirim</button>`);
+  const check=()=>{$("kirim").disabled=!(ans.bag===2&&ans.wajib!==null&&ans.imei===1&&ans.setuju)};
+  $("bag").oninput=e=>{ans.bag=e.target.value===""?null:+e.target.value;
+    $("hBag").innerHTML=ans.bag!==null&&ans.bag!==2?`<div class="hint bad">Hitung lagi: 1 koper + 1 ransel.</div>`:""; check()};
+  const H={wajib:["Jawab \"Ya\" bila total nilai barang yang dibeli di luar negeri melebihi FOB USD 500. Nilai HP-mu akan dicek petugas dari invoice.",
+                  "Boleh, asal nilai barangmu tidak melebihi FOB USD 500. Kalau ternyata melebihi, petugas akan menghitung pungutannya."],
+           imei:["Betul. HP dari luar negeri yang akan memakai SIM card Indonesia perlu registrasi IMEI.",
+                 "Kalau menjawab \"Tidak\", IMEI tidak diproses dan HP-mu tidak akan dapat sinyal operator Indonesia. Coba lagi."]};
+  $("sheet").querySelectorAll(".yn").forEach(g=>g.querySelectorAll("button").forEach(b=>b.onclick=()=>{
+    const q=g.dataset.q,v=+b.dataset.v; ans[q]=v;
+    g.querySelectorAll("button").forEach(x=>x.classList.toggle("on",x===b));
+    const bad=q==="imei"&&v!==1;
+    $(q==="wajib"?"hWajib":"hImei").innerHTML=`<div class="hint${bad?" bad":q==="imei"?" good":""}">${H[q][v===1?0:1]}</div>`;
+    check();
+  }));
+  $("setuju").onchange=e=>{ans.setuju=e.target.checked;check()};
+  $("kirim").onclick=()=>{
+    openPanel(`<span class="tag">Customs Declaration terkirim</span><h2>Simpan QR code ini</h2>
+     <div class="qrbox"><canvas id="qr" width="25" height="25"></canvas>
+     <p>Tunjukkan QR code ini ke petugas Bea Cukai saat pemeriksaan, bersama paspor, boarding pass, invoice, dan HP-nya.</p></div>
+     <div class="hint">WNA yang berkunjung ke Indonesia tidak lebih dari 90 hari tidak perlu registrasi IMEI di Bea Cukai tempat kedatangan.</div>
+     <button class="go" id="ok">Simpan</button>`);
+    drawQR($("qr")); $("ok").onclick=closePanel;
+  };
+ },
+ koper(){
+  const others=["DIMAS","SITI A.","R. HUTAPEA","MEI LING","YUSUF"].sort(()=>Math.random()-.5).slice(0,2);
+  const bags=[[P.toUpperCase(),1,"#2f6fb0"],[others[0],0,"#c0473a"],[others[1],0,"#3c8a6a"]].sort(()=>Math.random()-.5);
+  openPanel(`<span class="tag">Tempat pengambilan bagasi</span><h2>Mana kopermu?</h2>
+   <p>Cek label nama di gagang koper sebelum mengambilnya.</p>
+   <div class="belt">${bags.map((b,i)=>`<button class="bag" data-i="${i}" aria-label="Koper dengan label ${esc(b[0])}">
+     <svg viewBox="0 0 80 96" aria-hidden="true"><rect x="28" y="4" width="24" height="12" rx="4" fill="none" stroke="#555" stroke-width="5"/>
+     <rect x="8" y="16" width="64" height="70" rx="8" fill="${b[2]}"/><path d="M24 22v58M40 22v58M56 22v58" stroke="rgba(0,0,0,.18)" stroke-width="3"/>
+     <circle cx="20" cy="90" r="5" fill="#333"/><circle cx="60" cy="90" r="5" fill="#333"/></svg>
+     <small>${esc(b[0])}</small></button>`).join("")}</div><div id="kh"></div>`);
+  $("sheet").querySelectorAll(".bag").forEach(el=>el.onclick=()=>{
+    const b=bags[+el.dataset.i];
+    if(b[1]) closePanel();
+    else{el.classList.remove("no");void el.offsetWidth;el.classList.add("no");$("kh").innerHTML=`<div class="hint bad">Eh, ini koper milik ${esc(b[0])}. Bukan punyamu.</div>`}
+  });
+ },
+ dokumen(){
+  const opts=[["Paspor, boarding pass, invoice pembelian, dan HP yang akan didaftarkan",1],
+    ["KTP, Kartu Keluarga, dan HP yang akan didaftarkan",0],
+    ["Paspor, slip gaji, dan surat keterangan kerja",0],
+    ["Boarding pass dan foto kotak HP saja",0]];
+  openPanel(`<span class="tag">Meja layanan IMEI</span><h2>Dokumen apa yang kamu serahkan?</h2>
+   <div style="display:flex;flex-direction:column;gap:8px">${opts.map((o,i)=>`<button class="choice" style="box-shadow:none" data-i="${i}"><span class="k">${String.fromCharCode(65+i)}</span>${o[0]}</button>`).join("")}</div>`);
+  $("sheet").querySelectorAll(".choice").forEach(b=>b.onclick=()=>{
+    if(opts[+b.dataset.i][1]){ $("panel").hidden=true; say("me","Ini, Bang: paspor, boarding pass, invoice, dan HP-nya.",null); }
+    else { $("panel").hidden=true; waitChoice=true; say("think","Perasaan bukan ini deh yang tadi dibilang Kak Bela. Coba saya lihat lagi.",()=>{
+      setTimeout(()=>{waitChoice=false;$("panel").hidden=false},1500);}); }
+  });
+ },
+ harga(){
+  openPanel(`<span class="tag">Invoice pembelian</span><h2>Benar, harganya adalah…</h2>
+   <p>Isi harga HP sesuai invoice dalam dolar Amerika. Coba bandingkan harga di bawah dan di atas USD 500.</p>
+   <div class="field"><label for="usd">Harga HP</label><div class="inp"><span>USD</span><input id="usd" type="number" min="1" step="0.01" inputmode="decimal" placeholder="contoh: 750"></div></div>
+   <div id="hh"></div>
+   <button class="go" id="ok" disabled>Sampaikan ke Petugas Awan</button>`);
+  const inp=$("usd");
+  inp.oninput=()=>{const v=parseFloat(inp.value);const okv=v>0&&v<100000;$("ok").disabled=!okv;
+    $("hh").innerHTML=okv?`<div class="hint">${v<=BEBAS?"Masih dalam batas pembebasan USD 500.":"Melebihi pembebasan USD 500, jadi ada bea masuk dan PPN."}</div>`:""};
+  $("ok").onclick=()=>{harga=Math.round(parseFloat(inp.value)*100)/100; $("panel").hidden=true; say("me",`Benar, Bang. Harganya ${usd(harga)}.`,null)};
+ },
+ tagihan(){
+  const t=pajak();
+  openPanel(`<span class="tag">Perhitungan dari Petugas Awan</span><h2>Bea masuk dan pajak HP-mu</h2>
+   <table><tr><td>Harga HP (invoice)</td><td>${usd(harga)}</td></tr>
+   <tr><td>Pembebasan per penumpang</td><td>− USD ${BEBAS}</td></tr>
+   <tr><td>Selisih kena pungutan</td><td>${usd(t.lebih)}</td></tr>
+   <tr><td>Nilai pabean (× kurs ${rp(KURS)})</td><td>${rp(t.np)}</td></tr>
+   <tr><td>Bea masuk 10% × nilai pabean</td><td>${rp(t.bm)}</td></tr>
+   <tr><td>Nilai impor (nilai pabean + BM)</td><td>${rp(t.ni)}</td></tr>
+   <tr><td>PPN 12% × nilai impor</td><td>${rp(t.ppn)}</td></tr>
+   <tr class="tot"><td>Total yang dibayar</td><td>${rp(t.total)}</td></tr></table>
+   <p style="font-size:.78rem;color:#4b5f68">Kurs hanya contoh untuk simulasi.</p>
+   <button class="go" id="bayar">Bayar via transfer</button>`);
+  $("bayar").onclick=()=>{$("panel").hidden=true; say("me","Baik, saya bayar lewat transfer ya, Bang.",null)};
+ },
+ bpn(){
+  const t=pajak(), d=new Date();
+  openPanel(`<span class="tag">Diterima dari Petugas Awan</span>
+   <div class="receipt"><h3>Bukti Penerimaan Negara</h3>
+    <p style="font-size:.75rem;color:var(--bad);font-weight:700">Contoh untuk simulasi, bukan dokumen resmi</p>
+    <table><tr><td>Nama</td><td>${esc(P.toUpperCase())}</td></tr>
+    <tr><td>Uraian</td><td>BM & PPN impor HP</td></tr>
+    <tr><td>Bea masuk</td><td>${rp(t.bm)}</td></tr><tr><td>PPN</td><td>${rp(t.ppn)}</td></tr>
+    <tr class="tot"><td>Jumlah</td><td>${rp(t.total)}</td></tr>
+    <tr><td>Tanggal</td><td>${d.toLocaleDateString("id-ID",{day:"numeric",month:"long",year:"numeric"})}</td></tr></table></div>
+   <p>Simpan bukti ini. Bukti penerimaan negara menandakan pungutan sudah lunas dan pendaftaran IMEI bisa diproses.</p>
+   <button class="go" id="ok">Simpan bukti</button>`);
+  $("ok").onclick=closePanel;
+ },
+ akhir(){
+  $("dlg").hidden=true; setSprite(null);
+  openPanel(`<span class="tag">Misi selesai</span><h2>Selamat, ${esc(P)}! IMEI-mu terdaftar lewat jalur resmi.</h2>
+   <span class="tag">Yang perlu diingat</span>
+   <ul class="facts">
+    <li>Isi Customs Declaration di All Indonesia dan jawab "Ya" pada pertanyaan registrasi IMEI.</li>
+    <li>Siapkan paspor, boarding pass, invoice (jika ada), dan HP yang akan didaftarkan.</li>
+    <li>Pendaftaran IMEI gratis. Pungutan hanya atas nilai di atas pembebasan USD 500.</li>
+    <li>Bayar hanya lewat jalur resmi dan simpan Bukti Penerimaan Negara.</li>
+    <li>IMEI aktif paling lambat 2×24 jam.</li>
+    <li>Tolak jasa "unlock IMEI" yang meminta transfer ke rekening pribadi.</li></ul>
+   <p>Tanya Bravo Bea Cukai: <code class="n">1500225</code></p>
+   <p><a href="https://allindonesia.imigrasi.go.id/" target="_blank" rel="noopener">All Indonesia</a> · <a href="https://www.beacukai.go.id/register-imei.html" target="_blank" rel="noopener">Info registrasi IMEI</a></p>
+   <button class="go" id="ulang">Main lagi</button>`);
+  $("ulang").onclick=()=>location.reload();
+ }
+};
+
+function drawQR(c){
+  const g=c.getContext("2d"),N=25;g.fillStyle="#fff";g.fillRect(0,0,N,N);g.fillStyle="#111";
+  let seed=P.length*7919+harga+12345;const rnd=()=>(seed=(seed*9301+49297)%233280)/233280;
+  for(let y=0;y<N;y++)for(let x=0;x<N;x++)if(rnd()>.5)g.fillRect(x,y,1,1);
+  [[0,0],[N-7,0],[0,N-7]].forEach(([x,y])=>{g.fillStyle="#fff";g.fillRect(Math.max(0,x-1),Math.max(0,y-1),9,9);g.fillStyle="#111";g.fillRect(x,y,7,7);g.fillStyle="#fff";g.fillRect(x+1,y+1,5,5);g.fillStyle="#111";g.fillRect(x+2,y+2,3,3)});
+}
+
+/* layar judul */
+$("bg").style.backgroundImage=`url(${IMG("bg-lobby")})`; curBg="lobby"; setSteps("");
+const sp=$("sp"); sp.src=IMG("bela-arahkan"); sp.dataset.n="bela-arahkan"; sp.alt="Petugas Bela"; sp.classList.remove("hide");
+sp.style.left="72%";
+$("nama").oninput=e=>{$("start").disabled=!e.target.value.trim()};
+$("nama").onkeydown=e=>{if(e.key==="Enter"&&e.target.value.trim())$("start").click()};
+$("start").onclick=()=>{
+  P=$("nama").value.trim().replace(/\s+/g," ").slice(0,16)||"Kamu";
+  $("title").remove(); sp.style.left=""; setSprite(null); curBg=null; next(); $("dlg").focus();
+};
+</script>
