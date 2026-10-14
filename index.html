@@ -34,7 +34,7 @@ button{font:inherit;cursor:pointer}
 .bg.out{opacity:0}
 .sprite{position:absolute;left:50%;bottom:0;height:94%;transform:translateX(-50%);transition:opacity .35s,transform .35s;filter:drop-shadow(0 8px 24px rgba(0,0,0,.45))}
 .sprite.hide{opacity:0;transform:translate(-50%,24px)}
-@media (max-aspect-ratio:4/5){.sprite{height:72%;bottom:12%}}
+@media (max-aspect-ratio:4/5){.sprite{height:76%;bottom:0}}
 .sprite.dim{filter:brightness(.62) drop-shadow(0 8px 24px rgba(0,0,0,.45))}
 
 .dlg{position:absolute;left:12px;right:12px;bottom:12px;min-height:22%;background:var(--box);border:2px solid var(--box-line);border-radius:12px;padding:24px 18px 30px;cursor:pointer;backdrop-filter:blur(4px)}
@@ -152,7 +152,8 @@ const STEPS=[["lobby","Lobi"],["bagasi","Bagasi"],["antre","Pemeriksaan"],["hall
 ["awan-dada","awan-silakan","awan-dokumen","awan-namaste","bela-namaste","bela-jelaskan","bela-arahkan","calo","calo-hp",...Object.values(BGS)].forEach(n=>{const i=new Image();i.src=IMG(n)});
 
 let P="Kamu", harga=0;
-const pajak=()=>{const lebih=Math.max(0,harga-BEBAS),np=lebih*KURS,bm=np*.10,ni=np+bm,ppn=ni*.12;return{lebih,np,bm,ni,ppn,total:bm+ppn}};
+const PAY=[["M-Banking","Menu Penerimaan Negara di aplikasi bank","M-Banking menu Penerimaan Negara"],["QRIS","Pindai kode QRIS di loket layanan","QRIS"],["Pembayaran EDC","Gesek atau tap kartu di mesin EDC loket","mesin EDC"]];
+const pajak=()=>{const lebih=Math.max(0,harga-BEBAS),np=lebih*KURS,bm=np*.10,ni=np+bm,ppn=ni*(11/12)*.12;return{lebih,np,bm,ni,ppn,total:bm+ppn}};
 
 /* =====================================================================
    NASKAH PERCAKAPAN — BAGIAN INI YANG BOLEH DIEDIT
@@ -186,7 +187,7 @@ const SCRIPT=[
  {who:"me",t:"Sudah, Kak. Ini QR code-nya. Oh iya, saya mau daftar IMEI. Saya harus ke mana ya, Kak?"},
  {sp:"bela-jelaskan",who:"bela",t:"Untuk pendaftaran IMEI bisa langsung diregistrasikan di sini ya, Kak. Apakah Kakak sudah memiliki dokumen persyaratannya?"},
  {who:"me",t:"Dokumennya apa saja, Kak?"},
- {sp:"bela-jelaskan",who:"bela",t:"Invoice atau faktur pembelian (jika ada), boarding pass, paspor, dan perangkat yang akan didaftarkan ya, Kak."},
+ {sp:"bela-jelaskan",who:"bela",t:"Invoice atau faktur pembelian (jika ada), boarding pass, paspor, dan perangkat yang akan didaftarkan ya, Kak. Satu penumpang bisa mendaftarkan maksimal dua perangkat."},
  {who:"me",t:"Oh, saya punya keempatnya, Kak!"},
  {sp:"bela-arahkan",who:"bela",t:"Baik, Kak. Kakak bisa melanjutkan ke jalur ini ya."},
  {who:"me",t:"Baik, terima kasih, Kak."},
@@ -218,7 +219,7 @@ const SCRIPT=[
  {sp:"calo-hp",who:"calo",t:"Bener, Kak. Dijamin."},
  {choice:true,who:"think",t:"Hmm… apa jawabanku?",
   opts:[["Saya ada HP satu lagi nih, daftarin dong.",0],["Tidak, Bang. Setahu saya tidak ada jalur resmi yang transfer ke rekening pribadi. Terima kasih!",1]],
-  no:"Setahu saya, saya tidak sebodoh ini. Mungkin saya… harus pikir ulang."},
+  no:"Setahu saya, saya tidak seceroboh ini. Mungkin saya… harus pikir ulang."},
  {sp:"calo",who:"narr",t:"Kamu segera meninggalkan pria itu dan berjalan menuju stasiun."},
  {sp:null,who:"think",t:"Hari gini banyak orang yang nggak bisa dipercaya. Lebih baik lewat jalur resmi saja supaya nggak boncos dua kali."},
  {mission:"akhir"}
@@ -383,18 +384,21 @@ const MISSIONS={
  },
  tagihan(){
   const t=pajak();
-  openPanel(`<span class="tag">Perhitungan dari Petugas Awan</span><h2>Bea masuk dan pajak HP-mu</h2>
+  openPanel(`<span class="tag">Dari Petugas Awan</span><h2>Billing SPPBMCP</h2>
+   <p style="margin-top:-6px;color:#4b5f68">Surat Penetapan Pembayaran Bea Masuk, Cukai, dan/atau Pajak</p>
+   <div class="hint bad" style="font-weight:700">SIMULASI: tampilan ini hanya contoh, bukan dokumen asli SPPBMCP.</div>
    <table><tr><td>Harga HP (invoice)</td><td>${usd(harga)}</td></tr>
    <tr><td>Pembebasan per penumpang</td><td>− USD ${BEBAS}</td></tr>
    <tr><td>Selisih kena pungutan</td><td>${usd(t.lebih)}</td></tr>
    <tr><td>Nilai pabean (× kurs ${rp(KURS)})</td><td>${rp(t.np)}</td></tr>
    <tr><td>Bea masuk 10% × nilai pabean</td><td>${rp(t.bm)}</td></tr>
    <tr><td>Nilai impor (nilai pabean + BM)</td><td>${rp(t.ni)}</td></tr>
-   <tr><td>PPN 12% × nilai impor</td><td>${rp(t.ppn)}</td></tr>
+   <tr><td>PPN 12% × 11/12 × nilai impor</td><td>${rp(t.ppn)}</td></tr>
    <tr class="tot"><td>Total yang dibayar</td><td>${rp(t.total)}</td></tr></table>
    <p style="font-size:.78rem;color:#4b5f68">Kurs hanya contoh untuk simulasi.</p>
-   <button class="go" id="bayar">Bayar via transfer</button>`);
-  $("bayar").onclick=()=>{$("panel").hidden=true; say("me","Baik, saya bayar lewat transfer ya, Bang.",null)};
+   <span class="tag">Pilih cara pembayaran</span>
+   <div style="display:flex;flex-direction:column;gap:8px">${PAY.map((o,i)=>`<button class="go" data-i="${i}" style="text-align:left;font-size:.95rem">${o[0]}<br><span style="font-family:var(--body);font-weight:400;font-size:.78rem">${o[1]}</span></button>`).join("")}</div>`);
+  $("sheet").querySelectorAll("[data-i]").forEach(b=>b.onclick=()=>{const o=PAY[+b.dataset.i];$("panel").hidden=true; say("me",`Baik, saya bayar lewat ${o[2]} ya, Bang.`,null)});
  },
  bpn(){
   const t=pajak(), d=new Date();
@@ -418,7 +422,8 @@ const MISSIONS={
     <li>Isi Customs Declaration di All Indonesia dan jawab "Ya" pada pertanyaan registrasi IMEI.</li>
     <li>Siapkan paspor, boarding pass, invoice (jika ada), dan HP yang akan didaftarkan.</li>
     <li>Pendaftaran IMEI gratis. Pungutan hanya atas nilai di atas pembebasan USD 500.</li>
-    <li>Bayar hanya lewat jalur resmi dan simpan Bukti Penerimaan Negara.</li>
+    <li>Maksimal dua perangkat per penumpang.</li>
+    <li>Bayar lewat jalur resmi (M-Banking menu Penerimaan Negara, QRIS, atau mesin EDC) dan simpan Bukti Penerimaan Negara.</li>
     <li>IMEI aktif paling lambat 2×24 jam.</li>
     <li>Tolak jasa "unlock IMEI" yang meminta transfer ke rekening pribadi.</li></ul>
    <p>Tanya Bravo Bea Cukai: <code class="n">1500225</code></p>
