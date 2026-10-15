@@ -135,7 +135,7 @@ code.n{font-family:var(--mono);font-weight:700;background:#e8eef0;padding:2px 8p
   <div class="panel" id="panel" hidden><div class="sheet" id="sheet"></div></div>
   <div class="fade" id="fade"></div>
   <div class="title" id="title">
-    <span class="tag" style="color:var(--signal)">Simulasi registrasi IMEI · Bandara Kualanamu</span>
+    <span class="tag" style="color:var(--signal)">Simulasi registrasi IMEI · Bandara </span>
     <h1>Pulang Bawa<br><em>HP Baru</em></h1>
     <p>Kamu baru tiba dari luar negeri. Daftarkan IMEI HP-mu lewat jalur resmi Bea Cukai.</p>
     <div class="field"><label for="nama" style="color:var(--ink)">Siapa namamu?</label>
@@ -184,7 +184,7 @@ const pajak=()=>{const lebih=Math.max(0,harga-BEBAS),np=lebih*KURS,bm=np*.10,ni=
    ===================================================================== */
 const N={bela:"Petugas Bela",awan:"Petugas Awan",calo:"Pria berkacamata hitam",narr:""};
 const SCRIPT=[
- {bg:"lobby",sp:null,who:"narr",t:"Pesawatmu baru saja mendarat di Bandara Internasional Kualanamu. Kamu berjalan ke lobi kedatangan sambil menggenggam HP baru yang dibeli di luar negeri."},
+ {bg:"lobby",sp:null,who:"narr",t:"Pesawatmu baru saja mendarat di Bandara Internasional . Kamu berjalan ke lobi kedatangan sambil menggenggam HP baru yang dibeli di luar negeri."},
  {who:"think",t:"Oh iya! Aku belum isi e-CD di All Indonesia. Isi sekarang saja sebelum ke pemeriksaan."},
  {mission:"ecd"},
  {who:"think",t:"Beres. QR code-nya sudah tersimpan. Sekarang ambil bagasi dulu."},
@@ -200,7 +200,7 @@ const SCRIPT=[
  {sp:"bela-arahkan",who:"bela",t:"Baik, Kak. Kakak bisa melanjutkan ke jalur ini ya."},
  {who:"me",t:"Baik, terima kasih, Kak."},
  {fade:"Setelah pemeriksaan…"},
- {bg:"hall",sp:"awan-dada",who:"narr",t:"Kualanamu Customs Service Hall."},
+ {bg:"hall",sp:"awan-dada",who:"narr",t:" Customs Service Hall."},
  {sp:"awan-dada",who:"awan",t:"Selamat siang, Kak. Ada yang bisa saya bantu?"},
  {who:"me",t:"Saya mau daftar IMEI, Bang."},
  {sp:"awan-silakan",who:"awan",t:"Baik, Kak, silakan duduk. Boleh saya minta dokumennya?"},
